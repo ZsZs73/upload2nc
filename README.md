@@ -118,10 +118,15 @@ chmod 755 /etc/init.d/upload2nc
 - Select the freshly created shortcut and start scanning
 
 ## Troubleshooting
-### Logs
+### upload2nc Logs
 The script creates some log entries about successful/failed uploads
 ```bash
 logread | grep upload2nc
+```
+### FTP logs
+Check FTP logs by
+```bash
+logread | grep vsftp
 ```
 ### Trace FTP issues (advanced)
 Install and run tcpdump. It might help revealing firewall issues, etc
