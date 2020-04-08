@@ -7,13 +7,17 @@ so the idea is to set an OpenWRT router with following services:
 - FTP server, to receive files from the Scanner
 - A custom upload script which is triggered by files received via FTP
 
+## Security WARNING
+- FTP is an unsecure protocol (username/password are sent in clear text over the network), but I think that it is ok for my home network. One can set up a separate VLAN just for the scanner, but it is out of scope of this howto.
+- The file uploaded by the scanner to the OpenWRT will be sent to the Netxtcloud server in encrypted format if your Nextcloud URL starts with https://
+
 ## Requirements
 - ssh access to your Openwrt Router
 - access to your Nextcloud
 - access to your Brother Printer
 
 ## Settings on Nextcloud
-Set up afile drop upload share as described here: https://docs.nextcloud.com/server/18/user_manual/files/file_drop.html
+Set up a file drop upload share as described here: https://docs.nextcloud.com/server/18/user_manual/files/file_drop.html
 Password is optional as the share permissions will not let anyone list or download files.
 Save the share link, you'll need it later.
 
@@ -63,8 +67,8 @@ opkg install inotifywait curl
 ```
 #### Create config for upload2nc
 - Replace NeXtClOuDsHaReId with the ShareID you saved while creating the share
-- Replace 'ThIsIsOpTiOnAl' with the share password, otherwise it should be empty: ''
-- Replace nextcloud.server.url with your Nextclour URL. No trailing spash is needed.
+- Replace 'ThIsIsOpTiOnAl' with the share password, otherwise it should be empty: '' (two single apostrophes)
+- Replace nextcloud.server.url with your Nextclour URL. No trailing slash is needed.
 ```bash
 cd /etc/config
 touch upload2nc
@@ -76,8 +80,9 @@ uci set upload2nc.brother.ncsharepw='ThIsIsOpTiOnAl'
 uci commit upload2nc
 ```
 #### Copy upload2nc to Openwrt
-scp or paste the script to /etc/init.d/upload2nc and set permissions
+Download the script to /etc/init.d/upload2nc and set permissions
 ```bash
+curl -sS https://raw.githubusercontent.com/ZsZs73/upload2nc/master/upload2nc -o /etc/init.d/upload2nc
 chmod 755 /etc/init.d/upload2nc
 ```
 #### Enable and start the script
@@ -94,23 +99,23 @@ chmod 755 /etc/init.d/upload2nc
 	An 8 digit document counter number will be appended to the prefix
 - Navigate to Scan tab / Scan to FTP Profile
 - Click on an unused profile and set following
-  - Profile Name: Nextcloud (This name will show up on the display on the scanner)
+  - Profile Name: Nextcloud (This name will show up on the display of the scanner)
   - Host Address: ip address on your OpenWRT router
   - Username: the FTP username you created on the router (brother)
-  - Password: Password of the FTP user (as given by passwd brother)
+  - Password: Password of the FTP user (the same you typed in after 'passwd brother')
   - Store Directory: /tmp/tmp
   - File Name: Select the filename from the list (the prefix you created previously should appear on the list)
-  - Quality: set it as you orefer
-  - File Type: set it as you orefer
-  - Glass Scan Size: set it as you orefer
-  - File Size: set it as you orefer
-  - Remove Background Color: set it as you orefer or leave it default
+  - Quality: set it as you prefer
+  - File Type: set it as you prefer
+  - Glass Scan Size: set it as you prefer
+  - File Size: set it as you prefer
+  - Remove Background Color: set it as you prefer or leave it default
   - Passive mode: set it to Off
   - Port number: leave it default: 21
 	- Click Submit button
 	- Click yes on "Are you sure that you want to test?" -> Green Test OK should show up
 ### Create a shortcut
-- Select 'Scan' on the touch screen
+- Select 'Scan' on the touch screen of the scanner
 - Select 'to Ftp'
 - Select 'Nextcloud'
 - Save as Shortcut
@@ -118,7 +123,7 @@ chmod 755 /etc/init.d/upload2nc
 - Select the freshly created shortcut and start scanning
 
 ## Troubleshooting
-### upload2nc Logs
+### upload2nc logs
 The script creates some log entries about successful/failed uploads
 ```bash
 logread | grep upload2nc
@@ -128,9 +133,10 @@ Check FTP logs by
 ```bash
 logread | grep vsftp
 ```
-### Trace FTP issues (advanced)
+### Trace network issues (advanced)
 Install and run tcpdump. It might help revealing firewall issues, etc
 ```bash
 opkg install tcpdump
 tcpdump -nA host IP.OF.BRO.THER and port 21
 ```
+Comments, improvements are welcome.
