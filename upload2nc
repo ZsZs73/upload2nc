@@ -1,0 +1,78 @@
+#!/bin/sh /etc/rc.common
+# Released under MIT License
+# Copyright (c) 2020 Zsolt Zsiros
+
+START=96
+STOP=4
+
+USE_PROCD=1
+NAME=upload2nc
+PROG="/tmp/upload2nc.sh"
+
+process_conf() {
+    local nc_url
+    local nc_share
+    local nc_share_pw
+
+    # Load config and generate a launcher script
+    config_load "${NAME}"
+    config_get dir 'ftpdir' 'dir'
+    config_get nc_url 'ftpdir' 'nc_url'
+    config_get nc_share 'ftpdir' 'nc_share'
+    config_get nc_share_pw 'ftpdir' 'nc_share_pw'
+    printf "#!/bin/sh\n" > "$PROG"
+    printf "dir=%s\n" "$dir" >> "$PROG"
+    printf "/usr/bin/inotifywait -m --format '%%f' -e close_write \$dir | while read file\n" >> "$PROG"
+    printf "  do\n" >> "$PROG"
+    printf "    curlout=\$(curl -sSu \"%s:%s\" -H 'X-Requested-With: XMLHttpRequest' \x5C\n" "${nc_share}" "${nc_share_pw}" >> "$PROG"
+    printf "      -A \"%s@%s\" \x5C\n" "${NAME}" "$(uci_get system.@system[0].hostname)" >> "$PROG"
+    printf "      -T \"\$dir/\$file\" %s/public.php/webdav/\$file 2>&1 ) \n" "${nc_url}" >> "$PROG"
+    printf "    if [ -z "\$curlout" ]; then\n" >> "$PROG"
+    printf "      logger -t upload2nc \"\$file upload to %s successful\"\n" "${nc_url}" >> "$PROG"
+    printf "      rm \"\$dir/\$file\"\n" >> "$PROG"
+    printf "    else\n" >> "$PROG"
+    printf "      logger -t upload2nc \"\$file upload to %s failed\"\n" "${nc_url}" >> "$PROG"
+    printf "      logger -t upload2nc \"\$curlout\"\n" >> "$PROG"
+    printf "    fi\n" >> "$PROG"
+    printf "  done\n" >> "$PROG"
+    chmod 750 "$PROG"
+}
+
+start_service() {
+    process_conf
+    procd_open_instance
+    procd_set_param command "$PROG"
+    procd_set_param pidfile "/var/run/$NAME.pid"
+    procd_set_param stdout 1
+    procd_set_param stderr 1
+    procd_close_instance
+
+    [ -d "$dir" ] || mkdir -p $dir
+    chmod 1777 $dir
+
+    # It would be nice to re-send stuck files while starting the service but
+    # procd seems to launch the command once this script exits, hence the re-send
+    # has been moved to the stop part. This way stuck files will be re-sent by
+    # restarting the service.
+}
+
+stop_service() {
+    config_load "${NAME}"
+    config_get dir 'ftpdir' 'dir'
+
+    # loop thrugh existing files which might stuck in the input dir
+    # and trigger inotify to re-send them
+    if [ -n "$(ls -1 $dir)" ]; then
+        for file in $dir/*; do
+            echo "Re-sending ${file##/*/}"
+            echo -n '' >> $file
+        done
+    fi
+
+    # by action 'stop_service' procd terminates the main process only and leaves child
+    # process(es) intact. The part below terminates the defined child process
+    pid=$(pgrep -xf "/usr/bin/inotifywait -m --format %f -e close_write $dir")
+    if [ -n "${pid}" ]; then
+        kill ${pid} 2>/dev/null
+    fi
+}
