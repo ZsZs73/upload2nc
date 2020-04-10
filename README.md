@@ -2,19 +2,24 @@
 Send scans from Brother to Nextcloud
 ## Scan from Brother Multifunction Scanner/Printer to Nextcloud
 The Brother Multi device I have (DCP-L2560DW) does not support Nextcloud as
-target, but luckily it supports FTP upload. I also have an OpenWRT based router,
-so the idea is to set an OpenWRT router with following services:
+target, but luckily it supports FTP upload. I also have an OpenWRT based router which is always powered on,
+so the idea is to turn the OpenWRT router to a gateway between the scanner and Nextcloud by setting up following services on it:
 - FTP server, to receive files from the Scanner
-- A custom upload script which is triggered by files received via FTP
+- A custom upload script which is triggered by files received via FTP. This will post the file to a Nextcloud share. 
+## Advantages
+- No adminisrative rights on the Nextcloud server needed.
+- No need to run scheduled folder scan on Nexcloud server, the uploaded file will be shown immediately
+- No need to install ftp/samba server on the Nextcloud server
+- The procedure could be easily adjusted to upload via Samba instead of FTP, in case your scanner does not support upload via FTP
 
 ## Security WARNING
-- FTP is an unsecure protocol (username/password are sent in clear text over the network), but I think that it is ok for my home network. One can set up a separate VLAN just for the scanner, but it is out of scope of this howto.
-- The file uploaded by the scanner to the OpenWRT will be sent to the Netxtcloud server in encrypted format if your Nextcloud URL starts with https://
+- FTP is an unsecure protocol (username/password are sent in clear text over the network), but I think that it is ok for my home network. To mitigate the risks one can set up a separate VLAN just for the scanner, but it is out of the scope of this howto.
+- The file uploaded by the scanner to the OpenWRT will be sent to the Netxtcloud server via a secure channel if your Nextcloud URL starts with https://
 
 ## Requirements
-- ssh access to your Openwrt Router
-- access to your Nextcloud
-- access to your Brother Printer
+- root ssh access to your OpenWRT router to install required packages and script
+- user access to your Nextcloud to create a share for scanned documents
+- administrative access to your Brother Scanner to create FTP upload profile
 
 ## Settings on Nextcloud
 Set up a file drop upload share as described here: https://docs.nextcloud.com/server/18/user_manual/files/file_drop.html
@@ -33,7 +38,7 @@ opkg install vsftpd
 #### Configure FTP server
 Check if uid 1000 is not taken by existing users
 ```bash
-grep 100 /etc/passwd
+grep 1000 /etc/passwd
 ```
 Create a system user for FTP use and set it's password
 ```bash
@@ -47,7 +52,9 @@ sed -i 's/#syslog_enable=YES/syslog_enable=YES/' /etc/vsftpd.conf
 /etc/init.d/vsftpd start
 ```
 #### Add firewall rule to let FTP traffic in
-Replace IP.OF.BRO.THER with the ip of your scanner 
+Replace 'IP.OF.BRO.THER' with the ip of your scanner
+
+Replace 'lan' with the network segment of the scanner
 ```bash
 uci add firewall rule
 uci set firewall.@rule[-1].name='Allow FTP from Brother2'
@@ -68,7 +75,7 @@ opkg install inotifywait curl
 #### Create config for upload2nc
 - Replace NeXtClOuDsHaReId with the ShareID you saved while creating the share
 - Replace 'ThIsIsOpTiOnAl' with the share password, otherwise it should be empty: '' (two single apostrophes)
-- Replace nextcloud.server.url with your Nextclour URL. No trailing slash is needed.
+- Replace https://nextcloud.server.url with your Nextclour URL. No trailing slash is needed.
 ```bash
 cd /etc/config
 touch upload2nc
@@ -102,7 +109,7 @@ chmod 755 /etc/init.d/upload2nc
   - Profile Name: Nextcloud (This name will show up on the display of the scanner)
   - Host Address: ip address on your OpenWRT router
   - Username: the FTP username you created on the router (brother)
-  - Password: Password of the FTP user (the same you typed in after 'passwd brother')
+  - Password: Password of the FTP user (the same as you typed in after 'passwd brother')
   - Store Directory: /tmp/tmp
   - File Name: Select the filename from the list (the prefix you created previously should appear on the list)
   - Quality: set it as you prefer
