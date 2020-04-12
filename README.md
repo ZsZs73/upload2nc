@@ -1,5 +1,5 @@
 # upload2nc
-Send scans from Brother to Nextcloud
+Send scanned documents from Brother to Nextcloud
 ## Scan from Brother Multifunction Scanner/Printer to Nextcloud
 The Brother Multi device I have (DCP-L2560DW) does not support Nextcloud as
 target, but luckily it supports FTP upload. I also have an OpenWRT based router which is always powered on,
@@ -24,7 +24,13 @@ so the idea is to turn the OpenWRT router to a gateway between the scanner and N
 ## Settings on Nextcloud
 Set up a file drop upload share as described here: https://docs.nextcloud.com/server/18/user_manual/files/file_drop.html
 Password is optional as the share permissions will not let anyone list or download files.
-Save the share link, you'll need it later.
+Save the share link, you'll need it later. 
+
+Example share link: https://mycloud.mydomain.net/s/N3XtCl0dShAr31D
+
+Nextcloud URL: https://mycloud.mydomain.net
+
+Share id: N3XtCl0dShAr31D
 
 ## Settings on OpenWRT router
 ### Login and update package manager
@@ -52,9 +58,8 @@ sed -i 's/#syslog_enable=YES/syslog_enable=YES/' /etc/vsftpd.conf
 /etc/init.d/vsftpd start
 ```
 #### Add firewall rule to let FTP traffic in
-Replace 'IP.OF.BRO.THER' with the ip of your scanner
-
-Replace 'lan' with the network segment of the scanner
+- Replace 'IP.OF.BRO.THER' with the ip of your scanner
+- Replace 'lan' with the network segment of the scanner. If you do not have an exotic configuration with many network segments added, then leave it as 'lan'.
 ```bash
 uci add firewall rule
 uci set firewall.@rule[-1].name='Allow FTP from Brother2'
@@ -73,7 +78,7 @@ uci commit firewall
 opkg install inotifywait curl
 ```
 #### Create config for upload2nc
-- Replace NeXtClOuDsHaReId with the ShareID you saved while creating the share
+- Replace N3XtCl0dShAr31D with the 15 characters long Share id you saved after creating the share
 - Replace 'ThIsIsOpTiOnAl' with the share password, otherwise it should be empty: '' (two single apostrophes)
 - Replace https://nextcloud.server.url with your Nextclour URL. No trailing slash is needed.
 ```bash
@@ -82,7 +87,7 @@ touch upload2nc
 uci add upload2nc brother
 uci set upload2nc.brother.tmpdir=/tmp/tmp
 uci set upload2nc.brother.ncurl=https://nextcloud.server.url
-uci set upload2nc.brother.ncshare=NeXtClOuDsHaReId
+uci set upload2nc.brother.ncshare=N3XtCl0dShAr31D
 uci set upload2nc.brother.ncsharepw='ThIsIsOpTiOnAl'
 uci commit upload2nc
 ```
