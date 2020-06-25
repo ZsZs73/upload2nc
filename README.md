@@ -94,7 +94,7 @@ uci commit upload2nc
 #### Copy upload2nc to Openwrt
 Download the script to /etc/init.d/upload2nc and set permissions
 ```bash
-curl -sS https://raw.githubusercontent.com/ZsZs73/upload2nc/master/upload2nc -o /etc/init.d/upload2nc
+wget https://raw.githubusercontent.com/ZsZs73/upload2nc/master/upload2nc -O /etc/init.d/upload2nc
 chmod 755 /etc/init.d/upload2nc
 ```
 #### Enable and start the script
@@ -151,4 +151,9 @@ Install and run tcpdump. It might help revealing firewall issues, etc
 opkg install tcpdump
 tcpdump -nA host IP.OF.BRO.THER and port 21
 ```
+## OpenWrt upgrade
+On sysupgrade the content of the flash gets overwritten, so re-installing of the script is needed by executing steps in the following sections above:
+- Copy upload2nc to Openwrt
+- Enable and start the script
+
 Comments, improvements are welcome.
