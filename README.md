@@ -153,6 +153,7 @@ tcpdump -nA host IP.OF.BRO.THER and port 21
 ```
 ## OpenWrt upgrade
 On sysupgrade the content of the flash gets overwritten, so re-installing of the script is needed by executing steps in the following sections above:
+- Install required packages
 - Copy upload2nc to Openwrt
 - Enable and start the script
 
